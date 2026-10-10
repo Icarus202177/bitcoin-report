@@ -271,6 +271,67 @@ extra = f"""
 """
 
 page = page.replace("</body>", extra + "</body>")
+rsi_now = rsi_line[-1]
+if rsi_now > 70:
+    rsi_text = f"RSI is {round(rsi_now)}: overbought. The price has risen fast and often pauses or dips from here."
+elif rsi_now < 30:
+    rsi_text = f"RSI is {round(rsi_now)}: oversold. The price has fallen fast and often bounces from here."
+elif rsi_now >= 60:
+    rsi_text = f"RSI is {round(rsi_now)}: strong upward momentum, getting close to overbought (70)."
+elif rsi_now <= 40:
+    rsi_text = f"RSI is {round(rsi_now)}: weak momentum, getting close to oversold (30)."
+else:
+    rsi_text = f"RSI is {round(rsi_now)}: neutral. No strong push either way."
+
+vol_week = sum(volumes[-8:-1]) / 7
+vol_90 = sum(volumes[-91:-1]) / 90
+vol_ratio = vol_week / vol_90
+week_change = (prices[-1] / prices[-8] - 1) * 100
+direction = "rising" if week_change > 0 else "falling"
+if vol_ratio > 1.3:
+    vol_text = f"Trading this week is busy ({round(vol_ratio, 1)}x the usual level) while the price is {direction} ({week_change:+.1f}% in 7 days). Busy trading makes this move more convincing."
+elif vol_ratio < 0.8:
+    vol_text = f"Trading this week is quiet ({round(vol_ratio, 1)}x the usual level) while the price is {direction} ({week_change:+.1f}% in 7 days). Moves on low volume are less convincing and can reverse more easily."
+else:
+    vol_text = f"Trading this week is normal ({round(vol_ratio, 1)}x the usual level). The price is {direction} ({week_change:+.1f}% in 7 days)."
+
+mood_today = int(fng30["data"][0]["value"])
+mood_label = fng30["data"][0]["value_classification"]
+if mood_today >= 75:
+    mood_meaning = "People are very excited. In the past this has often been near short-term tops, so chasing the price is risky."
+elif mood_today >= 55:
+    mood_meaning = "People are optimistic. Normal in an uptrend, but worth watching if it climbs into extreme greed."
+elif mood_today > 45:
+    mood_meaning = "People are undecided. No strong emotion either way."
+elif mood_today > 25:
+    mood_meaning = "People are nervous. In the past, fear during an uptrend has often come before recoveries."
+else:
+    mood_meaning = "People are panicking. In the past, extreme fear has often been near bottoms."
+mood_text = f"Mood is {mood_today}/100 ({mood_label}); the 30-day average is {round(mood_30)}. {mood_meaning}"
+
+band_position = (price - lower_band[-1]) / (upper_band[-1] - lower_band[-1]) * 100
+widths = [(u - l) / m for u, l, m in zip(upper_band, lower_band, ma20) if m == m]
+if band_position > 90:
+    band_text = "The price is at the top of its normal range: stretched high, and often due a pause."
+elif band_position < 10:
+    band_text = "The price is at the bottom of its normal range: stretched low, and often due a bounce."
+elif band_position >= 50:
+    band_text = "The price is in the upper half of its normal range: firm, but not stretched."
+else:
+    band_text = "The price is in the lower half of its normal range: soft, but not stretched."
+if widths[-1] < 0.6 * (sum(widths) / len(widths)):
+    band_text += " The band is unusually narrow (a 'squeeze'). Big moves often follow, in either direction."
+
+now_section = f"""
+<h2>Right now: what the indicators say</h2>
+<ul>
+<li><b>Momentum (RSI):</b> {rsi_text}</li>
+<li><b>Trading activity (volume):</b> {vol_text}</li>
+<li><b>Market mood (Fear &amp; Greed):</b> {mood_text}</li>
+<li><b>Price range (Bollinger Bands):</b> {band_text}</li>
+</ul>
+"""
+page = page.replace("<h2>The chart</h2>", now_section + "<h2>The chart</h2>")
 with open("report.html", "w", encoding="utf-8") as file:
     file.write(page)
 print("Report saved as report.html")
