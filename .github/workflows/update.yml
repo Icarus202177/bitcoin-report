@@ -18,9 +18,11 @@ jobs:
           python-version: "3.13"
       - run: pip install requests matplotlib
       - run: python chart.py
+      - run: python cycle.py
       - run: |
+          cp report.html index.html
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
-          git add report.html bitcoin_chart.png
+          git add *.html *.png
           git commit -m "Update report" || echo "No changes"
           git push
